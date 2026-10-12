@@ -11,7 +11,7 @@
       "pages": {
         ".read": true,
         "$pageId": {
-          ".write": "auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true",
+          ".write": "auth != null && root.child('wikiV1/admins').child(auth.uid).val() === true",
           ".validate": "newData.hasChildren(['title','category','description','body','updatedAt']) && newData.child('title').isString() && newData.child('title').val().length <= 100 && newData.child('description').isString() && newData.child('description').val().length <= 1000 && newData.child('body').isString() && newData.child('body').val().length <= 20000 && newData.child('category').isString() && (newData.child('category').val() === '게임' || newData.child('category').val() === '도구' || newData.child('category').val() === '앱' || newData.child('category').val() === '기본' || newData.child('category').val() === '도움말')",
           "$other": {
             ".validate": false
@@ -22,10 +22,10 @@
         ".indexOn": [
           "status"
         ],
-        ".read": "auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true",
+        ".read": "auth != null && root.child('wikiV1/admins').child(auth.uid).val() === true",
         "$proposalId": {
-          ".write": "(auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true) || (auth != null && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending')",
-          ".validate": "newData.hasChildren(['mode','targetId','title','category','description','body','uid','status','createdAt']) && (( !data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending') || (data.exists() && auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true && newData.child('uid').val() === data.child('uid').val()))",
+          ".write": "(auth != null && root.child('wikiV1/admins').child(auth.uid).val() === true) || (auth != null && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending')",
+          ".validate": "newData.hasChildren(['mode','targetId','title','category','description','body','uid','status','createdAt']) && ((!data.exists() && auth != null && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending') || (data.exists() && (auth != null && root.child('wikiV1/admins').child(auth.uid).val() === true) && newData.child('uid').val() === data.child('uid').val()))",
           "mode": {
             ".validate": "newData.val() === 'create' || newData.val() === 'edit'"
           },
