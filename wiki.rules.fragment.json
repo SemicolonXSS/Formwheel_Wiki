@@ -1,17 +1,65 @@
 {
   "rules": {
     "wikiV1": {
+      "admins": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": false,
+          ".validate": "newData.isBoolean()"
+        }
+      },
       "pages": {
         ".read": true,
-        ".write": false
+        "$pageId": {
+          ".write": "auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true",
+          ".validate": "newData.hasChildren(['title','category','description','body','updatedAt']) && newData.child('title').isString() && newData.child('title').val().length <= 100 && newData.child('description').isString() && newData.child('description').val().length <= 1000 && newData.child('body').isString() && newData.child('body').val().length <= 20000 && newData.child('category').isString() && (newData.child('category').val() === '게임' || newData.child('category').val() === '도구' || newData.child('category').val() === '앱' || newData.child('category').val() === '기본' || newData.child('category').val() === '도움말')",
+          "$other": {
+            ".validate": false
+          }
+        }
       },
       "proposals": {
-        ".read": false,
-        ".write": false
-      },
-      "rate": {
-        ".read": false,
-        ".write": false
+        ".indexOn": [
+          "status"
+        ],
+        ".read": "auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true",
+        "$proposalId": {
+          ".write": "(auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true) || (auth != null && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending')",
+          ".validate": "newData.hasChildren(['mode','targetId','title','category','description','body','uid','status','createdAt']) && (( !data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending') || (data.exists() && auth != null && auth.provider !== 'anonymous' && root.child('wikiV1/admins').child(auth.uid).val() === true && newData.child('uid').val() === data.child('uid').val()))",
+          "mode": {
+            ".validate": "newData.val() === 'create' || newData.val() === 'edit'"
+          },
+          "targetId": {
+            ".validate": "newData.isString() && newData.val().length <= 64"
+          },
+          "title": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+          "category": {
+            ".validate": "newData.val() === '게임' || newData.val() === '도구' || newData.val() === '앱' || newData.val() === '기본' || newData.val() === '도움말'"
+          },
+          "description": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1000"
+          },
+          "body": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20000"
+          },
+          "uid": {
+            ".validate": "newData.isString()"
+          },
+          "status": {
+            ".validate": "newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected'"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "reviewedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "reviewedBy": {
+            ".validate": "newData.isString()"
+          }
+        }
       }
     }
   }
