@@ -25,29 +25,28 @@ GitHub Pages에서 **Deploy from a branch**를 선택하고 `main` 브랜치의 
 
 현재 문서들은 입문용 안내이며, 게임별 기능과 규칙은 변경될 수 있습니다.
 
-## 사용자 문서 생성·편집 및 관리자 승인
+## 사용자 문서 생성·편집 및 승인 (Spark 무료 요금제)
 
-위키 화면에서 **＋ 새 문서 작성**, 각 문서의 **✏️ 편집 요청**, 상단 **편집 요청 관리**를 사용합니다.
+**Firebase Functions와 Secret Manager가 필요하지 않습니다.** 브라우저가 Firebase Authentication 및 Realtime Database를 사용합니다.
 
-- 제출한 문서는 `wikiV1/proposals`에 **대기** 상태로 저장됩니다.
-- 관리자는 서버에서만 확인하는 비밀 코드로 대기 요청을 조회하고 승인·거부합니다.
-- 승인된 문서는 `wikiV1/pages`에서 공개적으로 읽을 수 있습니다.
-- 거부된 요청은 게시되지 않습니다.
-- Firebase Authentication의 Anonymous 로그인이 활성화되어 있어야 제출할 수 있습니다.
+- 방문자는 Anonymous 로그인으로 문서 생성·편집 요청을 `wikiV1/proposals`에 **pending** 상태로 제출합니다.
+- 승인 대기 요청은 일반 방문자에게 공개되지 않습니다.
+- 관리자는 Google 계정으로 로그인한 후 Firebase에서 미리 등록한 **관리자 UID**로 권한 검증을 받고 승인·거부합니다.
+- 승인할 때 `wikiV1/pages`에 문서가 저장되고, 요청은 **approved**로 변경됩니다. 거부 시 **rejected**로 변경됩니다.
+- 관리자 비밀번호를 웹페이지에 저장하거나 코드만으로 관리자 권한을 얻는 방식은 사용하지 않습니다.
 
-**중요: GitHub에 코드를 올린 것만으로 서버 기능이 작동하지 않습니다.** Firebase 프로젝트 `formwheel`에서 Cloud Functions(배포 요금제 요건 확인)를 실제 배포해야 합니다.
+### 반드시 먼저 적용할 설정
 
-### 배포 체크리스트
+1. Firebase Console → Authentication → Sign-in method에서 **Anonymous**, **Google** 로그인 방식을 활성화합니다. Authorized domains 목록에 `semicolonxss.github.io`가 있는지도 확인합니다.
+2. Wiki → **편집 요청 관리** → **Google 로그인**을 선택해 관리자 계정으로 로그인합니다. 화면에 나타난 **UID**를 복사합니다. UID는 이메일 주소가 아닙니다.
+3. Firebase Console → Realtime Database → Data 탭에서 `wikiV1/admins/복사한UID = true` (Boolean)를 추가합니다. 관리자 UID 등록은 Firebase Console에서만 수행합니다.
+4. **현재 운영 Realtime Database 규칙을 백업**합니다. `wiki.rules.fragment.json`의 `wikiV1` 부분을 현재 `rules` 아래에 **병합**해 Rules 탭에서 게시합니다. 파일을 전체 규칙 대신 붙여 넣어 덮어쓰면 다른 게임이 손상될 수 있습니다.
+5. **중요:** 루트 또는 상위 경로에 `".read": true`나 `".write": true`가 있으면 하위 규칙으로 권한을 거부할 수 없습니다. 해당 광역 공개 규칙을 먼저 안전하게 전환하지 않으면 승인 대기 문서가 노출되거나 임의 승인이 가능해집니다. 다른 Formwheel 게임들에 영향을 줄 수 있으므로 staging에서 테스트한 후에만 게시하세요.
+6. GitHub Pages가 업데이트된 뒤 신규 문서 제출 → 관리자 목록 확인 → 승인 → 다른 기기에서 공개 확인 순서로 테스트합니다.
 
-1. Firebase 프로젝트에서 Anonymous Auth를 켜고 허용 도메인에 `semicolonxss.github.io`를 설정합니다.
-2. Firebase CLI로 프로젝트를 `formwheel`에 연결합니다. 이 저장소 `functions/`를 Firebase Functions 소스 디렉터리로 지정합니다.
-3. `firebase functions:secrets:set WIKI_ADMIN_CODE --project formwheel`를 실행하고 **사용자만 아는 관리자 확인 코드**를 콘솔에서 입력합니다. **코드를 GitHub 파일, 클라이언트 JS, GitHub Actions 로그에 기록하지 마세요.** 유출이 의심되면 변경하세요.
-4. `firebase deploy --only functions:wikiSubmit,functions:wikiModerate --project formwheel` 로 두 Cloud Function을 배포합니다.
-5. Realtime Database Rules의 **기존 규칙과 병합하여** `wikiV1/pages` 공개 읽기·클라이언트 쓰기 금지, `wikiV1/proposals` 읽기·쓰기 금지, `wikiV1/rate` 읽기·쓰기 금지를 설정하고 실제 배포합니다. 참고용 `wiki.rules.fragment.json`은 전체 규칙을 덮어쓰는 데 사용하면 안 됩니다.
-6. 다른 모든 상위 경로를 포함하여 공개 쓰기 규칙(`".write": true`)이 있다면 하위 규칙만으로 쓰기 금지가 불가능합니다. 상위 공개 규칙부터 제거해야 합니다. 운영 데이터에 영향이 생길 수 있으므로 반드시 staging에서 먼저 점검하세요.
-7. 새 문서 제출 → 요청 조회 → 승인/거부 → 새로고침 및 다른 기기에서 문서 공개 여부를 검증합니다.
+**보안 참고:** Firebase Spark에서도 Database Rules를 실제 운영 서버에 게시해야 보안이 적용됩니다. 규칙을 적용하지 않았거나 광역 공개 규칙이 남아 있으면 **승인 기능을 운영하지 마세요.** 브라우저에서 작성 버튼이 보이는 것과 실제 DB 접근 권한은 별개입니다.
 
-**현재 주의:** 문서 내용은 텍스트로 표시됩니다. 승인 코드는 브라우저에 내장하지 않았습니다. 실제 배포와 Firebase Rules 적용 전에는 제출/승인 API가 실패할 수 있습니다. 코드 하나만으로 관리자 권한을 증명하므로 실제 운영 환경에서는 관리자 계정(custom claims)과 보안 모니터링을 추가하는 것이 좋습니다.
+기존 `functions/` 폴더는 이전 Blaze 방식의 참고용 파일이며 이 Spark 버전에서 사용하지 않습니다.
 
 ## 위키 문법
 
