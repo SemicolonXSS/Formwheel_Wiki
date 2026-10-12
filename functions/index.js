@@ -3,7 +3,8 @@ const {onCall,HttpsError}=require("firebase-functions/v2/https");
 const {defineSecret}=require("firebase-functions/params");
 const admin=require("firebase-admin");
 const crypto=require("node:crypto");
-admin.initializeApp();
+const {logger}=require("firebase-functions");
+admin.initializeApp({databaseURL:"https://formwheel-default-rtdb.firebaseio.com"});
 const secret=defineSecret("WIKI_ADMIN_CODE");
 const database=admin.database();
 const region="asia-northeast3";
@@ -21,10 +22,17 @@ exports.wikiSubmit=onCall({region,maxInstances:5},async request=>{
  const {mode,id,title,category,description,body}=request.data||{};
  if(!["create","edit"].includes(mode)||!validText(title,100)||!categories.includes(category)||!validText(description,1000)||!validText(body,20000))throw new HttpsError("invalid-argument","내용을 확인해주세요.");
  if(mode==="edit"&&!safeId(id))throw new HttpsError("invalid-argument","문서 주소가 올바르지 않습니다.");
- await throttle("submit/"+request.auth.uid,5,3600000);
- const node=database.ref("wikiV1/proposals").push();
- await node.set({mode,targetId:mode==="edit"?id:null,title:title.trim(),category,description:description.trim(),body:body.trim(),uid:request.auth.uid,status:"pending",createdAt:admin.database.ServerValue.TIMESTAMP});
- return {id:node.key,status:"pending"};
+ try{
+   await throttle("submit/"+request.auth.uid,5,3600000);
+   const node=database.ref("wikiV1/proposals").push();
+   await node.set({mode,targetId:mode==="edit"?id:null,title:title.trim(),category,description:description.trim(),body:body.trim(),uid:request.auth.uid,status:"pending",createdAt:admin.database.ServerValue.TIMESTAMP});
+   return {id:node.key,status:"pending"};
+ }catch(err){
+   if(err instanceof HttpsError)throw err;
+   const diagnosticId=crypto.randomBytes(4).toString("hex");
+   logger.error("wikiSubmit failed",{diagnosticId,errorCode:err?.code||"unknown",errorMessage:err?.message||"Unknown database error"});
+   throw new HttpsError("internal","문서 저장 서버 오류 (진단 ID: "+diagnosticId+"). 관리자에게 문의해주세요.");
+ }
 });
 exports.wikiModerate=onCall({region,secrets:[secret],maxInstances:3},async request=>{
  if(!request.auth)throw new HttpsError("unauthenticated","로그인이 필요합니다.");
