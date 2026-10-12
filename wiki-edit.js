@@ -1,44 +1,87 @@
-let auth=null,submit=null,moderate=null,signInAnonymously=null;
-let mode="create",editId=null,approved={},pending=[],ready=false;
-const $=s=>document.querySelector(s);
-function notice(el,message){$(el).textContent=message}
-async function ensureAuth(){if(!auth||!submit)throw new Error("온라인 요청 서버에 연결되지 않았습니다. Firebase 설정 및 Functions 배포를 확인해주세요.");if(auth.currentUser)return;await signInAnonymously(auth)}
-const editor=$("#wiki-editor-panel"),admin=$("#wiki-admin-panel");
-function openModal(el){el.classList.remove("hidden")}
-function closeModal(el){el.classList.add("hidden")}
-document.querySelectorAll("[data-close-modal]").forEach(b=>b.addEventListener("click",()=>closeModal(b.closest(".wiki-modal"))));
-admin.addEventListener("click",e=>{if(e.target===admin)closeModal(admin)});
-let returnHash="";
-function editTab(which){const preview=which==="preview";$("#wiki-tab-edit").classList.toggle("active",!preview);$("#wiki-tab-preview").classList.toggle("active",preview);$("#wiki-edit-source").classList.toggle("hidden",preview);$("#wiki-preview-content").classList.toggle("hidden",!preview);if(preview)$("#wiki-preview-content").innerHTML=window.WikiSyntax.render($("#wiki-body-input").value||"")||"아직 작성된 내용이 없습니다.";}
-function openEditor(){returnHash=location.hash;$("#wiki-editor-status").textContent="";editTab("edit");editor.classList.remove("hidden");$("#wiki-title-input").focus();}
-function exitEditor(){editor.classList.add("hidden");if(returnHash&&location.hash!==returnHash)location.hash=returnHash;}
+import {initializeApp} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import {getAuth,signInAnonymously,signInWithPopup,GoogleAuthProvider,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import {getDatabase,ref,push,set,get,update,onValue,query,orderByChild,equalTo,limitToLast} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+const config={apiKey:"AIzaSyBreTSe1m0-xlbF4aupnU5isRZCihR25IE",authDomain:"formwheel.firebaseapp.com",databaseURL:"https://formwheel-default-rtdb.firebaseio.com",projectId:"formwheel",appId:"1:431583088241:web:74e0e34ea1e3e1170c55d0"};
+const app=initializeApp(config,"formwheel-wiki"),auth=getAuth(app),db=getDatabase(app);
+const $=s=>document.querySelector(s),editor=$("#wiki-editor-panel"),admin=$("#wiki-admin-panel");
+let mode="create",editId=null,approved={},pending=[],returnHash="",isAdmin=false;
+function message(where,value){$(where).textContent=value}
+function reveal(el){el.classList.remove("hidden")}
+function hide(el){el.classList.add("hidden")}
+function errorMessage(e){const code=String(e?.code||"");if(code.includes("permission-denied"))return "Firebase Rules에서 권한이 거부되었어요. 관리자 UID/Rules 배포 또는 로그인 상태를 확인하세요.";if(code.includes("auth/popup"))return "Google 로그인 팝업이 차단되거나 닫혔어요.";if(code.includes("auth/operation-not-allowed"))return "Firebase Authentication에서 해당 로그인 방식을 활성화해야 해요.";return e?.message||"네트워크 및 Firebase 설정을 확인해 주세요."}
+async function ensureAuth(){if(auth.currentUser)return auth.currentUser;const cred=await signInAnonymously(auth);return cred.user}
+async function refreshAdmin(){const user=auth.currentUser;if(!user||user.isAnonymous){isAdmin=false;return false}const snap=await get(ref(db,"wikiV1/admins/"+user.uid));isAdmin=snap.val()===true;return isAdmin}
+function editTab(which){const preview=which==="preview";$("#wiki-tab-edit").classList.toggle("active",!preview);$("#wiki-tab-preview").classList.toggle("active",preview);$("#wiki-edit-source").classList.toggle("hidden",preview);$("#wiki-preview-content").classList.toggle("hidden",!preview);if(preview)$("#wiki-preview-content").innerHTML=window.WikiSyntax.render($("#wiki-body-input").value||"")||"본문이 비어 있습니다."}
+function openEditor(){returnHash=location.hash;message("#wiki-editor-status","");editTab("edit");reveal(editor);$("#wiki-title-input").focus()}
+function exitEditor(){hide(editor);if(returnHash&&location.hash!==returnHash)location.hash=returnHash}
+$("#wiki-create").addEventListener("click",()=>{mode="create";editId=null;$("#wiki-editor-form").reset();$("#wiki-editor-heading").textContent="새 문서 작성";$("#wiki-edit-crumb").textContent="새 문서 작성";$("#wiki-edit-count").textContent="0 / 20,000자";openEditor()});
+$("#wiki-edit").addEventListener("click",()=>{const id=location.hash.startsWith("#/page/")?location.hash.slice(7):null;const x=items.find(v=>v[0]===id);if(!x)return;mode="edit";editId=id;$("#wiki-editor-heading").textContent=x[1]+" (편집)";$("#wiki-edit-crumb").textContent=x[1]+" / 편집";$("#wiki-title-input").value=x[1];$("#wiki-category-input").value=["게임","도구","앱","기본","도움말"].includes(x[2])?x[2]:"기본";$("#wiki-description-input").value=x[5];$("#wiki-body-input").value=approved[id]?.body||window.WikiSyntax.sourceFor(x,typeof extended==="undefined"?{}:extended);$("#wiki-edit-count").textContent=$("#wiki-body-input").value.length.toLocaleString()+" / 20,000자";openEditor()});
+$("#wiki-tab-edit").onclick=()=>editTab("edit");$("#wiki-tab-preview").onclick=()=>editTab("preview");
+$("#wiki-body-input").oninput=()=>$("#wiki-edit-count").textContent=$("#wiki-body-input").value.length.toLocaleString()+" / 20,000자";
 $("#wiki-editor-cancel").onclick=exitEditor;$("#wiki-editor-cancel-bottom").onclick=exitEditor;
-$("#wiki-edit-home").onclick=e=>{e.preventDefault();editor.classList.add("hidden");location.hash="";};
-$("#wiki-tab-edit").onclick=()=>editTab("edit");
-$("#wiki-tab-preview").onclick=()=>editTab("preview");
-$("#wiki-body-input").addEventListener("input",()=>$("#wiki-edit-count").textContent=$("#wiki-body-input").value.length.toLocaleString()+" / 20,000자");
-$("#wiki-create").onclick=()=>{mode="create";editId=null;$("#wiki-editor-heading").textContent="새 문서 작성";$("#wiki-edit-crumb").textContent="새 문서 작성";$("#wiki-editor-form").reset();$("#wiki-edit-count").textContent="0 / 20,000자";openEditor();};
-$("#wiki-edit").onclick=()=>{const id=location.hash.startsWith("#/page/")?location.hash.slice(7):null;const x=items.find(x=>x[0]===id);if(!x)return;mode="edit";editId=id;$("#wiki-editor-heading").textContent=x[1]+" (편집)";$("#wiki-edit-crumb").textContent=x[1]+" / 편집";$("#wiki-title-input").value=x[1];$("#wiki-category-input").value=["기본","게임","도구","앱","도움말"].includes(x[2])?x[2]:"기본";$("#wiki-description-input").value=x[5];$("#wiki-body-input").value=approved[id]?.body||window.WikiSyntax.sourceFor(x,typeof extended!=="undefined"?extended:{});$("#wiki-edit-count").textContent=$("#wiki-body-input").value.length.toLocaleString()+" / 20,000자";openEditor();};
-$("#wiki-admin-open").onclick=()=>openModal(admin);
-$("#wiki-editor-form").onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;notice("#wiki-editor-status","요청을 보내는 중…");try{await ensureAuth();await submit({mode,id:editId,title:$("#wiki-title-input").value.trim(),category:$("#wiki-category-input").value,description:$("#wiki-description-input").value.trim(),body:$("#wiki-body-input").value.trim()});notice("#wiki-editor-status","요청 접수 완료! 관리자 승인 전에는 공개되지 않습니다.");setTimeout(exitEditor,1200)}catch(err){{const code=String(err.code||"");const message=code.includes("internal")?(err.message&&err.message.includes("진단 ID")?err.message:"서버 내부 오류입니다. Firebase Functions 배포 및 서버 로그를 확인해주세요. (functions/internal)"):code.includes("not-found")?"제출 함수가 아직 배포되지 않았거나 위치가 다릅니다. (functions/not-found)":code.includes("unauthenticated")?"로그인이 필요합니다. (functions/unauthenticated)":code.includes("resource-exhausted")?"요청 횟수 제한에 도달했어요. 나중에 다시 시도해주세요.":(err.message||"연결 설정을 확인해주세요.");console.error("Wiki 제출 실패",err);notice("#wiki-editor-status","제출 실패: "+message)}}finally{b.disabled=false}};
-$("#wiki-admin-load").onclick=()=>loadQueue();
-async function loadQueue(){notice("#wiki-admin-status","요청을 확인하는 중…");try{await ensureAuth();const response=await moderate({action:"list",code:$("#wiki-admin-code").value});pending=response.data.proposals||[];drawQueue();notice("#wiki-admin-status","승인 대기 요청 "+pending.length+"개")}catch(e){notice("#wiki-admin-status","조회 실패: "+e.message)}}
-function drawQueue(){const root=$("#wiki-admin-list");root.replaceChildren();for(const p of pending){const box=document.createElement("section");box.className="wiki-proposal";const h=document.createElement("h3");h.textContent=p.title+" · "+(p.mode==="edit"?"편집":"생성");const desc=document.createElement("p");desc.textContent=p.description;const pre=document.createElement("pre");pre.textContent=p.body;const actions=document.createElement("div");actions.className="actions";for(const [label,decision] of [["✓ 승인","approve"],["✕ 거부","reject"]]){const b=document.createElement("button");b.className="btn"+(decision==="approve"?" primary":"");b.textContent=label;b.onclick=async()=>{b.disabled=true;try{await moderate({action:decision,code:$("#wiki-admin-code").value,proposalId:p.id});pending=pending.filter(x=>x.id!==p.id);drawQueue();notice("#wiki-admin-status",label+" 처리 완료")}catch(e){notice("#wiki-admin-status","처리 실패: "+e.message);b.disabled=false}};actions.append(b)}box.append(h,desc,pre,actions);root.append(box)}}
-const catIcon={게임:"🎮",도구:"🛠️",앱:"📱",기본:"📖",도움말:"❓"};
-// Moderated content is always plain text, never treated as executable HTML.
-async function initializeWikiBackend(){
+$("#wiki-edit-home").onclick=e=>{e.preventDefault();hide(editor);location.hash=""};
+$("#wiki-editor-form").onsubmit=async e=>{
+ e.preventDefault();const button=$("#wiki-submit-edit");button.disabled=true;message("#wiki-editor-status","편집 요청을 저장하는 중…");
  try{
- const [{initializeApp},{getAuth,signInAnonymously:signIn},{getDatabase,ref,onValue},{getFunctions,httpsCallable}]=await Promise.all([
- import("https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"),
- import("https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"),
- import("https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js"),
- import("https://www.gstatic.com/firebasejs/11.10.0/firebase-functions.js")]);
- const config={apiKey:"AIzaSyBreTSe1m0-xlbF4aupnU5isRZCihR25IE",authDomain:"formwheel.firebaseapp.com",databaseURL:"https://formwheel-default-rtdb.firebaseio.com",projectId:"formwheel",appId:"1:431583088241:web:74e0e34ea1e3e1170c55d0"};
- const app=initializeApp(config,"wiki");auth=getAuth(app);signInAnonymously=signIn;const db=getDatabase(app),func=getFunctions(app,"asia-northeast3");submit=httpsCallable(func,"wikiSubmit");moderate=httpsCallable(func,"wikiModerate");
- onValue(ref(db,"wikiV1/pages"),snapshot=>{approved=snapshot.val()||{};window.wikiApprovedBody=Object.fromEntries(Object.entries(approved).filter(([id,p])=>p&&typeof p.body==="string").map(([id,p])=>[id,p.body]));for(const [id,p] of Object.entries(approved)){if(!p||typeof p.title!=="string")continue;let x=items.find(x=>x[0]===id);const steps=String(p.body||"").split(/\n+/).filter(Boolean).slice(0,30);if(x){x[1]=p.title;x[2]=p.category;x[4]=p.description;x[5]=p.description;x[6]=steps;x[7]="이 문서는 승인된 사용자 기여를 반영합니다."}else{items.push([id,p.title,p.category,catIcon[p.category]||"📄",p.description,p.description,steps,"이 문서는 승인된 사용자 기여입니다.","Formwheel/"])}}
- if(location.hash.match(/^#\/page\//))route();else drawList();
-},error=>console.warn("Wiki 공개 문서 읽기 실패:",error.message));
-
- }catch(error){console.warn("Wiki 온라인 연결 실패. 편집 화면은 계속 사용할 수 있습니다.",error);}
+  const user=await ensureAuth(),node=push(ref(db,"wikiV1/proposals"));
+  const title=$("#wiki-title-input").value.trim(),description=$("#wiki-description-input").value.trim(),body=$("#wiki-body-input").value.trim();
+  if(!title||!description||!body)throw new Error("제목, 소개, 본문을 입력해 주세요.");
+  if(mode==="edit"&&!/^[a-z0-9-]{1,64}$/.test(editId||""))throw new Error("올바르지 않은 문서 ID입니다.");
+  await set(node,{mode,targetId:mode==="edit"?editId:"",title,category:$("#wiki-category-input").value,description,body,uid:user.uid,status:"pending",createdAt:Date.now()});
+  message("#wiki-editor-status","접수 완료! 관리자 승인 전까지 공개되지 않아요.");button.disabled=true;
+ }catch(err){message("#wiki-editor-status","제출 실패: "+errorMessage(err));button.disabled=false}
+};
+document.querySelectorAll("[data-close-modal]").forEach(b=>b.addEventListener("click",()=>hide(b.closest(".wiki-modal"))));
+admin.addEventListener("click",e=>{if(e.target===admin)hide(admin)});
+$("#wiki-admin-open").onclick=()=>reveal(admin);
+$("#wiki-admin-load").onclick=loadQueue;
+async function loadQueue(){
+ message("#wiki-admin-status","관리자 권한을 확인하는 중…");
+ try{
+  if(!await refreshAdmin())throw new Error("관리자로 등록된 Google 계정이 아니에요. 아래 'Google 로그인' 후 Rules의 관리자 UID를 확인해 주세요.");
+  const snap=await get(query(ref(db,"wikiV1/proposals"),orderByChild("status"),equalTo("pending"),limitToLast(100)));
+  pending=Object.entries(snap.val()||{}).map(([id,p])=>({id,...p})).sort((a,b)=>a.createdAt-b.createdAt);
+  drawQueue();message("#wiki-admin-status","대기 중인 요청 "+pending.length+"개");
+ }catch(err){message("#wiki-admin-status","조회 실패: "+errorMessage(err))}
 }
-initializeWikiBackend();
+$("#wiki-google-login").onclick=async()=>{try{const result=await signInWithPopup(auth,new GoogleAuthProvider());message("#wiki-admin-status","Google 로그인 완료. UID: "+result.user.uid+" · 관리자 등록 후 요청 조회를 눌러주세요.");await refreshAdmin()}catch(err){message("#wiki-admin-status","로그인 실패: "+errorMessage(err))}};
+$("#wiki-admin-logout").onclick=async()=>{await auth.signOut();isAdmin=false;message("#wiki-admin-status","로그아웃했어요.")};
+function drawQueue(){
+ const root=$("#wiki-admin-list");root.replaceChildren();
+ for(const p of pending){const box=document.createElement("section");box.className="wiki-proposal";
+  const h=document.createElement("h3");h.textContent=p.title+" · "+(p.mode==="edit"?"수정":"새 문서");
+  const summary=document.createElement("p");summary.textContent=p.description;
+  const pre=document.createElement("pre");pre.textContent=p.body;
+  const buttons=document.createElement("div");buttons.className="actions";
+  for(const [label,decision] of [["✓ 승인","approved"],["✕ 거부","rejected"]]){
+   const b=document.createElement("button");b.type="button";b.className="btn"+(decision==="approved"?" primary":"");b.textContent=label;
+   b.onclick=async()=>{if(!isAdmin)return;for(const node of buttons.querySelectorAll("button"))node.disabled=true;
+    try{
+     const changes={};
+     if(decision==="approved"){
+      const id=p.mode==="edit"?p.targetId:"community-"+p.id;
+      if(!/^[a-z0-9-]{1,100}$/.test(id))throw new Error("문서 ID가 올바르지 않습니다.");
+      changes["wikiV1/pages/"+id]={title:p.title,description:p.description,category:p.category,body:p.body,updatedAt:Date.now()};
+     }
+     changes["wikiV1/proposals/"+p.id+"/status"]=decision;
+     changes["wikiV1/proposals/"+p.id+"/reviewedBy"]=auth.currentUser.uid;
+     changes["wikiV1/proposals/"+p.id+"/reviewedAt"]=Date.now();
+     await update(ref(db),changes);pending=pending.filter(x=>x.id!==p.id);drawQueue();
+     message("#wiki-admin-status",decision==="approved"?"승인되어 공개됐어요.":"거부 처리했어요.");
+    }catch(err){message("#wiki-admin-status","처리 실패: "+errorMessage(err));for(const node of buttons.querySelectorAll("button"))node.disabled=false}
+   };buttons.append(b);
+  }box.append(h,summary,pre,buttons);root.append(box)}
+}
+onAuthStateChanged(auth,user=>{if(!user)isAdmin=false});
+onValue(ref(db,"wikiV1/pages"),snapshot=>{
+ approved=snapshot.val()||{};
+ window.wikiApprovedBody=Object.fromEntries(Object.entries(approved).filter(([,v])=>typeof v?.body==="string").map(([id,v])=>[id,v.body]));
+ for(const [id,p] of Object.entries(approved)){
+  if(!p||typeof p.title!=="string")continue;
+  const steps=String(p.body||"").split(/\n+/).filter(Boolean).slice(0,30);
+  let x=items.find(x=>x[0]===id);
+  if(x){x[1]=p.title;x[2]=p.category;x[4]=p.description;x[5]=p.description;x[6]=steps;x[7]="승인된 사용자 문서입니다."}
+  else items.push([id,p.title,p.category,"📄",p.description,p.description,steps,"승인된 사용자 문서입니다.","Formwheel/"]);
+ }
+ if(location.hash.startsWith("#/page/"))route();else drawList();
+},err=>console.error("Wiki 승인 문서 읽기 오류",err));
