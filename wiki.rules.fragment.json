@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "wikiV1": {
+      "pages": {
+        ".read": true,
+        ".write": false
+      },
+      "proposals": {
+        ".read": false,
+        ".write": false
+      },
+      "rate": {
+        ".read": false,
+        ".write": false
+      }
+    }
+  }
+}
