@@ -13,7 +13,7 @@ function safeId(v){return typeof v==="string"&&/^[a-z0-9-]{1,64}$/.test(v)}
 function compare(a,b){const x=crypto.createHash("sha256").update(String(a)).digest(),y=crypto.createHash("sha256").update(String(b)).digest();return crypto.timingSafeEqual(x,y)}
 async function throttle(key,limit,windowMs){
  const path=database.ref("wikiV1/rate/"+key);const now=Date.now();
- const result=await path.transaction(old=>{if(!old||old.until<now)return {count:1,until:now+windowMs};if(old.count>=limit)return;return {count:old.count+1,until:old.until}},{applyLocally:false});
+ const result=await path.transaction(old=>{if(!old||old.until<now)return {count:1,until:now+windowMs};if(old.count>=limit)return;return {count:old.count+1,until:old.until}},undefined,false);
  if(!result.committed)throw new HttpsError("resource-exhausted","요청 횟수가 너무 많습니다. 잠시 후 다시 시도해주세요.");
 }
 exports.wikiSubmit=onCall({region,maxInstances:5},async request=>{
