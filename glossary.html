@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#f7f8fc">
-<meta name="description" content="Formwheel 공식 용어집 v1.0 — 플랫폼·프로젝트·게임·계정·개발 용어를 검색하고 확인하세요.">
+<meta name="description" content="Formwheel 공식 용어집 v1.1 — 플랫폼·프로젝트·게임·계정·개발 용어를 검색하고 확인하세요.">
 <title>Glossary</title>
 <link rel="icon" href="https://semicolonxss.github.io/Formwheel/assets/formwheel-favicon.svg">
 <style>
@@ -54,9 +54,9 @@ footer{max-width:1160px;padding:26px 20px;margin:auto;text-align:center;color:va
 <div class="grid" id="terms"></div>
 <div class="panel"><h2>프로젝트 표시명 규칙</h2><div class="examples"><div class="example good"><strong>✓ 권장</strong><code>Battle</code><p>개별 프로젝트 제목은 단독 표시</p></div><div class="example bad"><strong>✕ 비권장</strong><code>Formwheel Battle</code><p>플랫폼 이름을 자동으로 붙이지 않음</p></div></div><p>GitHub 저장소 <code>Formwheel_Battle</code>과 URL <code>/Formwheel_Battle/</code>은 변경하지 않아.</p></div>
 <div class="panel"><h2>버전 관리 정책</h2><p><b>MAJOR.MINOR.PATCH</b> 형식을 사용해. 큰 규칙 변경은 v2.0.0, 호환되는 용어 추가는 v1.1.0, 오탈자 정정은 v1.0.1로 기록해.</p><div class="version"><div><b>v1.0.0</b><br><small>2026.10.12 · 최초 공식 확정</small></div><a href="https://github.com/SemicolonXSS/Formwheel_Wiki/blob/main/standards/versions/v1.0.0.md" target="_blank" rel="noopener">보관본 보기 ↗</a></div><div class="version"><div><b>최신 원문</b><br><small>GitHub Markdown 표준 문서</small></div><a href="https://github.com/SemicolonXSS/Formwheel_Wiki/blob/main/standards/glossary.md" target="_blank" rel="noopener">원문 보기 ↗</a></div></div>
-<div class="panel"><h2>적용 시 주의사항</h2><ul><li>동일한 기능에는 프로젝트 전체에서 동일한 한국어 버튼 명칭을 사용해.</li><li>프로젝트 고유 이름은 유지하고, 설명 문장에서는 ‘Formwheel의 Battle 프로젝트’라고 표현할 수 있어.</li><li>Firebase 필드·경로, 인증 및 방 코드를 문구 통일을 이유로 자동 변경하지 않아.</li><li>기존 공식 표준 변경은 반드시 변경 이력에 기록해.</li></ul></div>
+<div class="panel"><h2>v1.1 · 새 용어 안내</h2><p>AQS의 업적·퀘스트·Secret, XP와 보상의 차이, Orbit Identity 및 ECHO·NOVA·VOID·RIFT·NULL 명칭을 추가했어. 기능 운영 여부와 해금 조건은 각 프로젝트의 현재 안내를 확인해 줘.</p><p><a href="./standards/glossary.md">전체 표준 문서</a>에서 사용 예시·충돌 방지 규칙·문서 작성 기준을 확인할 수 있어.</p></div><div class="panel"><h2>적용 시 주의사항</h2><ul><li>동일한 기능에는 프로젝트 전체에서 동일한 한국어 버튼 명칭을 사용해.</li><li>프로젝트 고유 이름은 유지하고, 설명 문장에서는 ‘Formwheel의 Battle 프로젝트’라고 표현할 수 있어.</li><li>Firebase 필드·경로, 인증 및 방 코드를 문구 통일을 이유로 자동 변경하지 않아.</li><li>기존 공식 표준 변경은 반드시 변경 이력에 기록해.</li></ul></div>
 </div></div>
-</main><footer>© Formwheel · Official Glossary v1.0.0 · <a href="./">Wiki로 돌아가기</a></footer>
+</main><footer>© Formwheel · Official Glossary v1.1.0 · <a href="./">Wiki로 돌아가기</a></footer>
 <script>
 const groups=["전체","플랫폼","분류","게임·매칭","계정·소셜","기록·이벤트","개발·UI"];
 const data=[
@@ -123,7 +123,27 @@ const data=[
 ["Join Room","방 참가","기존 방에 들어가는 버튼","개발·UI"],
 ["Leave Room","방 나가기","현재 방에서 퇴장하는 버튼","개발·UI"],
 ["Update History","업데이트 내역","변경 사항을 확인하는 화면","개발·UI"],
-["Send Feedback","개선 의견 보내기","사용자 의견 제출 버튼","개발·UI"]
+["Send Feedback","개선 의견 보내기","사용자 의견 제출 버튼","개발·UI"],
+["AQS","AQS","Achievement·Quest·Secret을 통합하는 경험 체계","플랫폼"],
+["Quest","퀘스트","진행 가능한 과제. 업적과 구분","기록·이벤트"],
+["Daily Quest","일일 퀘스트","정해진 주기로 갱신되는 과제","기록·이벤트"],
+["XP","XP(경험치)","활동 보상 및 성장 수치","기록·이벤트"],
+["Reward","보상","활동 달성으로 받는 혜택","기록·이벤트"],
+["Reward Claim","보상 수령","달성 후 보상 획득을 확정하는 행위","기록·이벤트"],
+["Discovery","발견","숨겨진 단서를 찾아낸 기록","기록·이벤트"],
+["Unlock","해금","잠긴 항목이 사용 가능해지는 상태","기록·이벤트"],
+["Secret","Secret","숨겨진 조건과 단서를 탐색하는 프로젝트","플랫폼"],
+["Spotlight","Spotlight","사용자 또는 활동을 조명하는 콘텐츠","플랫폼"],
+["Orbit","Orbit","연결과 순환을 나타내는 테마·세계관 개념","플랫폼"],
+["Orbit Identity","Orbit Identity","사용자가 선택·해금하는 정체성 표현","계정·소셜"],
+["Identity Change","Identity 변경","사용 중인 Identity를 바꾸는 행위","계정·소셜"],
+["ECHO","ECHO","Identity와 Story에 쓰이는 코드명","계정·소셜"],
+["NOVA","NOVA","Identity와 Story에 쓰이는 코드명","계정·소셜"],
+["VOID","VOID","Identity와 Story에 쓰이는 코드명","계정·소셜"],
+["RIFT","RIFT","Identity와 Story에 쓰이는 코드명","계정·소셜"],
+["NULL","NULL","별도 해금 조건이 적용될 수 있는 코드명","계정·소셜"],
+["Story","Story","Formwheel 서사를 경험하는 프로젝트","플랫폼"],
+["Chapter","챕터","Story의 진행 단위","기록·이벤트"]
 ];
 const root=document.getElementById("terms"),filters=document.getElementById("filters"),query=document.getElementById("search");
 let selected="전체";
